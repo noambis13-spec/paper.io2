@@ -1,166 +1,75 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Paper.io 2 - Lobby</title>
-<script src="/socket.io/socket.io.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:Arial,sans-serif;background:#1a1a2e;color:white;overflow:hidden;touch-action:none}
-#lobby{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
-#lobby h1{font-size:48px;color:#ff4757;text-shadow:0 0 20px #ff4757}
-#lobby p{opacity:.7}
-input{padding:14px 18px;border-radius:12px;border:none;font-size:18px;width:280px;text-align:center;outline:none}
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Paper.io 2</title><script src="/socket.io/socket.io.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial;background:#1a1a2e;color:white;overflow:hidden}
+#lobby{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
+#lobby h1{font-size:48px;color:#ff4757}input{padding:14px;border-radius:12px;border:none;font-size:18px;width:280px;text-align:center}
 button{padding:14px 24px;border:none;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;width:280px}
-#btnCreate{background:#2ed573;color:white}
-#btnJoin{background:#1e90ff;color:white}
-#joinBox{display:none;flex-direction:column;gap:10px;align-items:center}
-#roomInfo{display:none;flex-direction:column;align-items:center;gap:12px}
+#btnCreate{background:#2ed573;color:#fff}#btnJoin{background:#1e90ff;color:#fff}
+#joinBox{display:none;flex-direction:column;gap:10px}#roomInfo{display:none;flex-direction:column;align-items:center;gap:12px}
 #roomCode{font-size:42px;letter-spacing:8px;background:#0f3460;padding:10px 22px;border-radius:12px}
-#btnStart{background:#ffa502;color:white;display:none}
-#game{display:none;height:100vh;position:relative;background:#222}
-canvas{width:100%;height:100%;display:block;background:#2a2a2a}
-#pauseBtn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:white;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:10;border:2px solid white}
+#btnStart{background:#ffa502;display:none}#game{display:none;height:100vh;position:relative;background:#222}
+canvas{width:100%;height:100%;display:block;background:#f0f0f0}
+#pauseBtn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:#fff;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:10}
 #playersCount{position:absolute;top:14px;right:14px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:20px;z-index:10}
 #pauseMenu{display:none;position:absolute;inset:0;background:rgba(0,0,0,.85);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20}
-#pauseMenu h2{font-size:36px}
-#pauseMenu button{width:260px}
-#btnResume{background:#2ed573;color:white}
-#btnRestart{background:#ffa502}
-#btnLobby{background:#ff4757;color:white}
-</style>
-</head>
+#pauseMenu button{width:260px}#btnResume{background:#2ed573;color:#fff}#btnRestart{background:#ffa502}#btnLobby{background:#ff4757;color:#fff}
+#score{position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:20px;z-index:10}
+</style></head>
 <body>
 <div id="lobby">
-  <h1>PAPER.IO 2</h1>
-  <p>10 שחקנים בחדר - השאר בוטים!</p>
-  <input id="nameInput" placeholder="השם שלך..." maxlength="12" value="Player">
-  <button id="btnCreate" onclick="createRoom()">CREATE ROOM</button>
-  <button id="btnJoin" onclick="showJoin()">JOIN ROOM</button>
-  <div id="joinBox">
-    <input id="codeInput" placeholder="קוד חדר - 6 ספרות" maxlength="6" inputmode="numeric" pattern="[0-9]*">
-    <button id="btnJoin2" onclick="joinRoom()">כניסה לחדר</button>
-  </div>
-  <div id="roomInfo">
-    <div>הקוד שלך - שלח לחברים:</div>
-    <div id="roomCode">------</div>
-    <div id="playersList">1 / 10 שחקנים</div>
-    <button id="btnStart" onclick="startGame()">התחל משחק ▶</button>
-    <div style="opacity:.6;font-size:13px">כשלוחצים התחל - משלימים אוטומטית לבוטים עד 10</div>
-  </div>
-  <div id="err" style="color:#ff4757"></div>
+<h1>PAPER.IO 2</h1><p>המשחק המקורי שלך - עכשיו עם חדרים!</p>
+<input id="nameInput" placeholder="השם שלך..." maxlength="12" value="Player">
+<button id="btnCreate" onclick="createRoom()">CREATE ROOM</button>
+<button id="btnJoin" onclick="showJoin()">JOIN ROOM</button>
+<div id="joinBox"><input id="codeInput" placeholder="קוד חדר - 6 ספרות" maxlength="6" inputmode="numeric"><button onclick="joinRoom()" style="background:#1e90ff;color:#fff">כניסה לחדר</button></div>
+<div id="roomInfo"><div>הקוד שלך - שלח לחברים:</div><div id="roomCode">------</div><div id="playersList">1 / 10</div><button id="btnStart" onclick="startGame()">התחל משחק ▶</button><div style="opacity:.6;font-size:13px">כשלוחצים התחל - משלימים לבוטים עד 10</div></div>
+<div id="err" style="color:#ff4757"></div>
 </div>
-<div id="game">
-  <canvas id="c"></canvas>
-  <div id="pauseBtn" onclick="togglePause(true)">⏸</div>
-  <div id="playersCount">10 / 10</div>
-  <div id="pauseMenu">
-    <h2>⏸ עצרת את המשחק</h2>
-    <button id="btnResume" onclick="togglePause(false)">המשך לשחק</button>
-    <button id="btnRestart" onclick="restartGame()">התחל מחדש</button>
-    <button id="btnLobby" onclick="backToLobby()">חזרה ללובי</button>
-  </div>
-</div>
+<div id="game"><canvas id="c"></canvas><div id="pauseBtn" onclick="togglePause(true)">⏸</div><div id="playersCount">10 / 10</div><div id="score">ניקוד: 0</div>
+<div id="pauseMenu"><h2>⏸ עצרת</h2><button id="btnResume" onclick="togglePause(false)">המשך לשחק</button><button id="btnRestart" onclick="restartGame()">התחל מחדש</button><button id="btnLobby" onclick="backToLobby()">חזרה ללובי</button></div></div>
 <script>
-const socket = io();
-let myRoom = '', paused = false, players = {};
-let keys = {};
-let myDir = {x:1,y:0};
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-window.addEventListener('resize', resize); resize();
-function createRoom(){
-  const name = document.getElementById('nameInput').value || 'Player';
-  socket.emit('createRoom', {name});
-}
-function showJoin(){ document.getElementById('joinBox').style.display='flex'; }
-function joinRoom(){
-  const name = document.getElementById('nameInput').value || 'Player';
-  const code = document.getElementById('codeInput').value.trim();
-  socket.emit('joinRoom', {name, code});
-}
-function startGame(){ socket.emit('startGame'); }
-socket.on('roomCreated', d => {
-  myRoom = d.code;
-  document.getElementById('roomCode').textContent = d.code;
-  document.getElementById('roomInfo').style.display='flex';
-  document.getElementById('btnStart').style.display='block';
-  document.getElementById('btnCreate').style.display='none';
-  document.getElementById('btnJoin').style.display='none';
-  document.getElementById('joinBox').style.display='none';
-});
-socket.on('roomJoined', d => {
-  myRoom = d.code;
-  document.getElementById('roomCode').textContent = d.code;
-  document.getElementById('roomInfo').style.display='flex';
-  document.getElementById('btnCreate').style.display='none';
-  document.getElementById('btnJoin').style.display='none';
-  document.getElementById('joinBox').style.display='none';
-});
-socket.on('playerList', list => {
-  document.getElementById('playersList').textContent = list.length + ' / 10 שחקנים';
-});
-socket.on('errorMsg', m => document.getElementById('err').textContent = m);
-socket.on('gameStarted', d => {
-  players = d.players;
-  document.getElementById('lobby').style.display='none';
-  document.getElementById('game').style.display='block';
-  resize();
-});
-socket.on('gameUpdate', data => { if(!paused) players = data; draw(); });
-window.addEventListener('keydown', e => {
-  keys[e.key.toLowerCase()] = true;
-  if(e.key === 'Escape'){ togglePause(!paused); }
-  updateDirFromKeys();
-});
-window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; updateDirFromKeys(); });
-function updateDirFromKeys(){
-  let x=0,y=0;
-  if(keys['w']||keys['arrowup']) y=-1;
-  if(keys['s']||keys['arrowdown']) y=1;
-  if(keys['a']||keys['arrowleft']) x=-1;
-  if(keys['d']||keys['arrowright']) x=1;
-  if(x!==0||y!==0){
-    const len = Math.sqrt(x*x+y*y);
-    myDir = {x:x/len, y:y/len};
-    socket.emit('move', {dirX: myDir.x, dirY: myDir.y});
-  }
-}
-canvas.addEventListener('mousemove', e => {
-  if(paused) return;
-  const rect = canvas.getBoundingClientRect();
-  socket.emit('move', {x: e.clientX - rect.left, y: e.clientY - rect.top});
-});
-canvas.addEventListener('touchstart', e => { e.preventDefault(); handleTouch(e); }, {passive:false});
-canvas.addEventListener('touchmove', e => { e.preventDefault(); handleTouch(e); }, {passive:false});
-function handleTouch(e){
-  const t = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  socket.emit('move', {x: t.clientX - rect.left, y: t.clientY - rect.top});
-}
-function togglePause(v){
-  paused = v;
-  document.getElementById('pauseMenu').style.display = v ? 'flex' : 'none';
-}
-function restartGame(){ paused=false; document.getElementById('pauseMenu').style.display='none'; startGame(); }
-function backToLobby(){ location.reload(); }
+const socket=io(); let players={}, paused=false, keys={}, myDir={x:1,y:0};
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth; canvas.height=innerHeight;} addEventListener('resize',resize); resize();
+function createRoom(){socket.emit('createRoom',{name:document.getElementById('nameInput').value||'Player'});}
+function showJoin(){document.getElementById('joinBox').style.display='flex';}
+function joinRoom(){socket.emit('joinRoom',{name:document.getElementById('nameInput').value||'Player', code:document.getElementById('codeInput').value.trim()});}
+function startGame(){socket.emit('startGame');}
+socket.on('roomCreated',d=>{document.getElementById('roomCode').textContent=d.code; document.getElementById('roomInfo').style.display='flex'; document.getElementById('btnStart').style.display='block'; document.getElementById('btnCreate').style.display='none'; document.getElementById('btnJoin').style.display='none'; document.getElementById('joinBox').style.display='none';});
+socket.on('roomJoined',d=>{document.getElementById('roomCode').textContent=d.code; document.getElementById('roomInfo').style.display='flex'; document.getElementById('btnCreate').style.display='none'; document.getElementById('btnJoin').style.display='none'; document.getElementById('joinBox').style.display='none';});
+socket.on('playerList',l=>{document.getElementById('playersList').textContent=l.length+' / 10 שחקנים';});
+socket.on('errorMsg',m=>document.getElementById('err').textContent=m);
+socket.on('gameStarted',d=>{players=d.players; document.getElementById('lobby').style.display='none'; document.getElementById('game').style.display='block'; resize();});
+socket.on('gameUpdate',d=>{if(!paused){players=d; draw();}});
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; if(e.key==='Escape') togglePause(!paused); updateDir();});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false; updateDir();});
+function updateDir(){let x=0,y=0; if(keys['w']||keys['arrowup'])y=-1; if(keys['s']||keys['arrowdown'])y=1; if(keys['a']||keys['arrowleft'])x=-1; if(keys['d']||keys['arrowright'])x=1; if(x||y){const l=Math.sqrt(x*x+y*y); myDir={x:x/l,y:y/l}; socket.emit('move',{dirX:myDir.x,dirY:myDir.y});}}
+canvas.addEventListener('mousemove',e=>{if(paused)return; const r=canvas.getBoundingClientRect(); socket.emit('move',{x:e.clientX-r.left+ (myX()-canvas.width/2), y:e.clientY-r.top+(myY()-canvas.height/2)});});
+function myX(){const me=players[socket.id]; return me?me.x:1000;} function myY(){const me=players[socket.id]; return me?me.y:1000;}
+canvas.addEventListener('touchstart',e=>{e.preventDefault(); handleTouch(e);},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault(); handleTouch(e);},{passive:false});
+function handleTouch(e){const t=e.touches[0]; const r=canvas.getBoundingClientRect(); socket.emit('move',{x:t.clientX-r.left+(myX()-canvas.width/2), y:t.clientY-r.top+(myY()-canvas.height/2)});}
+function togglePause(v){paused=v; document.getElementById('pauseMenu').style.display=v?'flex':'none';}
+function restartGame(){paused=false; document.getElementById('pauseMenu').style.display='none'; startGame();}
+function backToLobby(){location.reload();}
 function draw(){
+  const me=players[socket.id]; if(!me) return;
+  const camX=me.x-canvas.width/2, camY=me.y-canvas.height/2;
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle='rgba(255,255,255,0.08)';
-  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
-  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
-  for(const id in players){
-    const p = players[id];
-    if(!p.alive) continue;
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x % canvas.width, p.y % canvas.height, 14, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle='white'; ctx.font='12px Arial'; ctx.textAlign='center';
-    ctx.fillText(p.name, p.x % canvas.width, (p.y % canvas.height)-20);
-  }
+  // שטחים
+  for(const id in players){const p=players[id]; if(!p.alive)continue; ctx.fillStyle=p.color+'55'; p.territory.forEach(([tx,ty])=>{ctx.fillRect(tx*20-camX, ty*20-camY, 20,20);});}
+  // רשת
+  ctx.strokeStyle='rgba(0,0,0,0.08)'; for(let x=Math.floor(camX/20)*20; x<camX+canvas.width; x+=20){ctx.beginPath(); ctx.moveTo(x-camX,0); ctx.lineTo(x-camX,canvas.height); ctx.stroke();}
+  for(let y=Math.floor(camY/20)*20; y<camY+canvas.height; y+=20){ctx.beginPath(); ctx.moveTo(0,y-camY); ctx.lineTo(canvas.width,y-camY); ctx.stroke();}
+  // זנבות
+  for(const id in players){const p=players[id]; if(!p.alive)continue; ctx.fillStyle=p.color; p.trail.forEach(([tx,ty])=>{ctx.fillRect(tx*20-camX, ty*20-camY, 20,20);});}
+  // שחקנים
+  for(const id in players){const p=players[id]; if(!p.alive)continue; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x-camX,p.y-camY,12,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#000'; ctx.font='bold 12px Arial'; ctx.textAlign='center'; ctx.fillText(p.name,p.x-camX,p.y-camY-18);}
+  // גבול
+  ctx.strokeStyle='red'; ctx.lineWidth=3; ctx.strokeRect(-camX,-camY,2000,2000);
+  document.getElementById('score').textContent='ניקוד: '+(me.score||0)+' | שטח: '+(me.territory?me.territory.length:0);
+  document.getElementById('playersCount').textContent=Object.values(players).filter(p=>p.alive).length+' בחיים';
 }
-</script>
-</body>
-</html>
+</script></body></html>
