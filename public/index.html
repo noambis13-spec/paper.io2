@@ -1,540 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#e8edf2">
-<title>PAPER.IO 2</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Paper.io 2 - Lobby</title>
+<script src="/socket.io/socket.io.js"></script>
 <style>
-  :root {
-    --ink: #26303d;
-    --panel: rgba(24, 32, 46, 0.62);
-    --green-a: #5be07a;
-    --green-b: #23b556;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; width: 100%; height: 100%; overflow: hidden;
-    background: #e8edf2; color: var(--ink);
-    font-family: 'Nunito', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
-    font-weight: 800;
-    -webkit-user-select: none; user-select: none;
-    overscroll-behavior: none;
-  }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-
-  /* ---------- Start screen ---------- */
-  #start {
-    position: fixed; inset: 0; z-index: 20;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px;
-    padding: 24px;
-    background: radial-gradient(ellipse at center, rgba(255,255,255,0.55), rgba(232,237,242,0.82));
-    -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
-    transition: opacity .35s ease, visibility .35s;
-  }
-  #start.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-  .title {
-    margin: 0; display: flex; flex-wrap: wrap; justify-content: center;
-    font-size: clamp(52px, 13vw, 124px); font-weight: 900; line-height: 1; letter-spacing: 1px;
-  }
-  .title span {
-    display: inline-block;
-    color: var(--c);
-    text-shadow:
-      0 0 0 #fff, 3px 3px 0 #fff, -3px 3px 0 #fff, 3px -3px 0 #fff, -3px -3px 0 #fff,
-      0 5px 0 #fff, 0 -3px 0 #fff, 3px 0 0 #fff, -3px 0 0 #fff,
-      0 10px 18px rgba(30, 45, 70, 0.25);
-    animation: bob 2.6s ease-in-out infinite;
-    animation-delay: calc(var(--i) * -0.18s);
-  }
-  .title .gap { width: .28em; }
-  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-  .form { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(380px, 100%); }
-  #name {
-    width: 100%; height: 60px; border-radius: 30px; border: 4px solid #fff;
-    background: rgba(255,255,255,0.92); text-align: center;
-    font: inherit; font-size: 22px; color: var(--ink); outline: none;
-    box-shadow: 0 8px 22px rgba(30, 45, 70, 0.14);
-    transition: box-shadow .2s, border-color .2s;
-  }
-  #name::placeholder { color: #9aa6b4; }
-  #name:focus { border-color: #8fd3ff; box-shadow: 0 8px 26px rgba(47, 155, 255, 0.28); }
-  #play {
-    width: 100%; height: 66px; border: 0; border-radius: 33px; cursor: pointer;
-    font: inherit; font-size: 28px; font-weight: 900; color: #fff; letter-spacing: 1px;
-    background: linear-gradient(180deg, var(--green-a), var(--green-b));
-    box-shadow: 0 7px 0 #17883f, 0 14px 24px rgba(23, 136, 63, 0.35);
-    text-shadow: 0 2px 0 rgba(0,0,0,0.18);
-    transition: transform .08s ease, box-shadow .08s ease;
-  }
-  #play:hover { filter: brightness(1.05); }
-  #play:active { transform: translateY(5px); box-shadow: 0 2px 0 #17883f, 0 6px 12px rgba(23, 136, 63, 0.3); }
-  #play:focus-visible, .pad button:focus-visible { outline: 4px solid #2f9bff; outline-offset: 3px; }
-  .hint { margin: 0; font-size: 15px; color: #6b7a8c; text-align: center; font-weight: 700; }
-
-  /* ---------- HUD ---------- */
-  .hud { position: fixed; z-index: 10; opacity: 0; transition: opacity .3s; pointer-events: none; }
-  body.playing .hud { opacity: 1; }
-  #scoreBox {
-    top: calc(14px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
-    padding: 6px 22px; border-radius: 26px; background: var(--panel); color: #fff;
-    font-size: clamp(24px, 5vw, 34px); font-weight: 900; text-align: center; min-width: 120px;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    text-shadow: 0 2px 0 rgba(0,0,0,0.2);
-  }
-  #aliveBox {
-    top: calc(14px + env(safe-area-inset-top, 0px)); left: 14px;
-    display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 20px;
-    background: var(--panel); color: #fff; font-size: 15px;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  }
-  #aliveDot { width: 12px; height: 12px; border-radius: 50%; background: #5be07a; box-shadow: 0 0 10px #5be07a; }
-  #aliveBox.dead #aliveDot { background: #ff5a6e; box-shadow: 0 0 10px #ff5a6e; }
-  #board {
-    top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; width: 190px; padding: 10px 12px 8px;
-    border-radius: 18px; background: var(--panel); color: #fff;
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-  }
-  #board h3 { margin: 0 0 6px; font-size: 15px; font-weight: 900; text-align: center; }
-  #rows { list-style: none; margin: 0; padding: 0; }
-  #rows li { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 14px; }
-  #rows li.me { color: #ffe76a; }
-  #rows .rk { width: 14px; text-align: right; opacity: .75; }
-  #rows .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; flex: none; }
-  #rows .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #rows .pc { font-variant-numeric: tabular-nums; }
-
-  #banner {
-    position: fixed; z-index: 12; left: 50%; top: 42%; transform: translate(-50%, -50%);
-    text-align: center; pointer-events: none; opacity: 0; transition: opacity .25s;
-    color: #fff; font-weight: 900; font-size: clamp(30px, 7vw, 54px);
-    text-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.35);
-  }
-  #banner small { display: block; margin-top: 6px; font-size: clamp(16px, 3.5vw, 22px); font-weight: 800; }
-  #banner.show { opacity: 1; }
-
-  /* ---------- On-screen pad ---------- */
-  .pad {
-    position: fixed; z-index: 11; right: calc(18px + env(safe-area-inset-right, 0px));
-    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-    display: none; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(2, 58px); gap: 8px;
-    touch-action: none;
-  }
-  body.playing .pad { display: grid; }
-  .pad button {
-    border: 0; border-radius: 18px; cursor: pointer; font-size: 24px; color: #fff; font-family: inherit;
-    background: rgba(24, 32, 46, 0.55);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    box-shadow: 0 4px 0 rgba(0,0,0,0.25);
-    touch-action: none;
-  }
-  .pad button:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); background: rgba(24, 32, 46, 0.8); }
-  .pad .up { grid-column: 2; grid-row: 1; }
-  .pad .left { grid-column: 1; grid-row: 2; }
-  .pad .down { grid-column: 2; grid-row: 2; }
-  .pad .right { grid-column: 3; grid-row: 2; }
-
-  @media (max-width: 560px) {
-    #board { width: 150px; padding: 8px 10px 6px; }
-    #rows li { font-size: 12px; }
-    #aliveBox { font-size: 13px; padding: 6px 10px; }
-    .pad { grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(2, 52px); }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .title span { animation: none; }
-    #start, .hud, #banner { transition: none; }
-  }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:Arial,sans-serif;background:#1a1a2e;color:white;overflow:hidden;touch-action:none}
+#lobby{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)}
+#lobby h1{font-size:48px;color:#ff4757;text-shadow:0 0 20px #ff4757}
+#lobby p{opacity:.7}
+input{padding:14px 18px;border-radius:12px;border:none;font-size:18px;width:280px;text-align:center;outline:none}
+button{padding:14px 24px;border:none;border-radius:12px;font-size:18px;font-weight:bold;cursor:pointer;width:280px}
+#btnCreate{background:#2ed573;color:white}
+#btnJoin{background:#1e90ff;color:white}
+#joinBox{display:none;flex-direction:column;gap:10px;align-items:center}
+#roomInfo{display:none;flex-direction:column;align-items:center;gap:12px}
+#roomCode{font-size:42px;letter-spacing:8px;background:#0f3460;padding:10px 22px;border-radius:12px}
+#btnStart{background:#ffa502;color:white;display:none}
+#game{display:none;height:100vh;position:relative;background:#222}
+canvas{width:100%;height:100%;display:block;background:#2a2a2a}
+#pauseBtn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.6);color:white;width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:10;border:2px solid white}
+#playersCount{position:absolute;top:14px;right:14px;background:rgba(0,0,0,.6);padding:8px 14px;border-radius:20px;z-index:10}
+#pauseMenu{display:none;position:absolute;inset:0;background:rgba(0,0,0,.85);flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20}
+#pauseMenu h2{font-size:36px}
+#pauseMenu button{width:260px}
+#btnResume{background:#2ed573;color:white}
+#btnRestart{background:#ffa502}
+#btnLobby{background:#ff4757;color:white}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-
-<div id="start">
-  <h1 class="title" id="title" aria-label="PAPER.IO 2"></h1>
-  <div class="form">
-    <input id="name" type="text" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false" aria-label="Your name">
-    <button id="play" type="button">PLAY</button>
-    <p class="hint">Arrow keys, WASD, swipe, or the on-screen buttons.<br>Close your loop to claim land. Protect your tail.</p>
+<div id="lobby">
+  <h1>PAPER.IO 2</h1>
+  <p>10 שחקנים בחדר - השאר בוטים!</p>
+  <input id="nameInput" placeholder="השם שלך..." maxlength="12" value="Player">
+  <button id="btnCreate" onclick="createRoom()">CREATE ROOM</button>
+  <button id="btnJoin" onclick="showJoin()">JOIN ROOM</button>
+  <div id="joinBox">
+    <input id="codeInput" placeholder="קוד חדר - 6 ספרות" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+    <button id="btnJoin2" onclick="joinRoom()">כניסה לחדר</button>
+  </div>
+  <div id="roomInfo">
+    <div>הקוד שלך - שלח לחברים:</div>
+    <div id="roomCode">------</div>
+    <div id="playersList">1 / 10 שחקנים</div>
+    <button id="btnStart" onclick="startGame()">התחל משחק ▶</button>
+    <div style="opacity:.6;font-size:13px">כשלוחצים התחל - משלימים אוטומטית לבוטים עד 10</div>
+  </div>
+  <div id="err" style="color:#ff4757"></div>
+</div>
+<div id="game">
+  <canvas id="c"></canvas>
+  <div id="pauseBtn" onclick="togglePause(true)">⏸</div>
+  <div id="playersCount">10 / 10</div>
+  <div id="pauseMenu">
+    <h2>⏸ עצרת את המשחק</h2>
+    <button id="btnResume" onclick="togglePause(false)">המשך לשחק</button>
+    <button id="btnRestart" onclick="restartGame()">התחל מחדש</button>
+    <button id="btnLobby" onclick="backToLobby()">חזרה ללובי</button>
   </div>
 </div>
-
-<div id="scoreBox" class="hud">0.0%</div>
-<div id="aliveBox" class="hud"><span id="aliveDot"></span><span id="aliveText">Alive</span></div>
-<div id="board" class="hud"><h3>Leaderboard</h3><ol id="rows"></ol></div>
-<div id="banner"><span id="bannerMain">You were eliminated</span><small id="bannerSub"></small></div>
-
-<div class="pad" id="pad">
-  <button type="button" class="up" data-dx="0" data-dy="-1" aria-label="Up">&#9650;</button>
-  <button type="button" class="left" data-dx="-1" data-dy="0" aria-label="Left">&#9664;</button>
-  <button type="button" class="down" data-dx="0" data-dy="1" aria-label="Down">&#9660;</button>
-  <button type="button" class="right" data-dx="1" data-dy="0" aria-label="Right">&#9654;</button>
-</div>
-
-<script src="/socket.io/socket.io.js"></script>
 <script>
-(function () {
-  'use strict';
-
-  var socket = io(window.location.origin);
-
-  var WORLD = 2000, GRID = 40, N = WORLD / GRID, CELLS = N * N;
-
-  var canvas = document.getElementById('game');
-  var ctx = canvas.getContext('2d');
-  var startEl = document.getElementById('start');
-  var nameEl = document.getElementById('name');
-  var playBtn = document.getElementById('play');
-  var scoreBox = document.getElementById('scoreBox');
-  var aliveBox = document.getElementById('aliveBox');
-  var aliveText = document.getElementById('aliveText');
-  var rowsEl = document.getElementById('rows');
-  var banner = document.getElementById('banner');
-  var bannerMain = document.getElementById('bannerMain');
-  var bannerSub = document.getElementById('bannerSub');
-
-  /* ---------- Title letters ---------- */
-  (function buildTitle() {
-    var palette = ['#ff4d6d', '#ff9f2e', '#f5c400', '#2fc45a', '#12b5cb', '#2f9bff', '#a678ff', '#ff6fae', '#ff4d6d', '#ff9f2e'];
-    var text = 'PAPER.IO 2';
-    var box = document.getElementById('title');
-    var k = 0;
-    for (var i = 0; i < text.length; i++) {
-      var s = document.createElement('span');
-      s.style.setProperty('--i', String(i));
-      if (text[i] === ' ') {
-        s.className = 'gap';
-        s.innerHTML = '&nbsp;';
-      } else {
-        s.textContent = text[i];
-        s.style.setProperty('--c', palette[k % palette.length]);
-        k++;
-      }
-      box.appendChild(s);
-    }
-  })();
-
-  /* ---------- State ---------- */
-  var grid = new Array(CELLS).fill(-1);
-  var players = [];
-  var byPid = {};
-  var disp = {};
-  var me = null;
-  var joined = false;
-  var lastScore = 0;
-  var wasAlive = true;
-
-  socket.on('state', function (s) {
-    players = s.players;
-    if (s.grid) grid = s.grid;
-    byPid = {};
-    var seen = {};
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i];
-      byPid[p.pid] = p;
-      seen[p.id] = true;
-      var d = disp[p.id];
-      if (!d || Math.abs(d.x - p.x) > 250 || Math.abs(d.y - p.y) > 250) disp[p.id] = { x: p.x, y: p.y };
-    }
-    for (var id in disp) if (!seen[id]) delete disp[id];
-    me = null;
-    for (var j = 0; j < players.length; j++) if (players[j].id === socket.id) me = players[j];
-    updateHud();
-  });
-
-  /* ---------- HUD ---------- */
-  function pct(score) { return (score / CELLS * 100).toFixed(1) + '%'; }
-
-  function updateHud() {
-    if (!joined) return;
-    if (me) {
-      if (me.alive) lastScore = me.score;
-      scoreBox.textContent = pct(me.alive ? me.score : lastScore);
-      aliveBox.classList.toggle('dead', !me.alive);
-      aliveText.textContent = me.alive ? 'Alive' : 'Respawning...';
-      if (!me.alive && wasAlive) {
-        bannerMain.textContent = 'You were eliminated';
-        bannerSub.textContent = 'Territory: ' + pct(lastScore);
-        banner.classList.add('show');
-      } else if (me.alive && !wasAlive) {
-        banner.classList.remove('show');
-      }
-      wasAlive = me.alive;
-    }
-    var sorted = players.slice().sort(function (a, b) { return b.score - a.score; }).slice(0, 5);
-    rowsEl.innerHTML = '';
-    for (var i = 0; i < sorted.length; i++) {
-      var p = sorted[i];
-      var li = document.createElement('li');
-      if (me && p.id === me.id) li.className = 'me';
-      var rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = String(i + 1);
-      var dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = p.color;
-      var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = p.name;
-      var pc = document.createElement('span'); pc.className = 'pc'; pc.textContent = pct(p.score);
-      li.appendChild(rk); li.appendChild(dot); li.appendChild(nm); li.appendChild(pc);
-      rowsEl.appendChild(li);
-    }
-  }
-
-  /* ---------- Start / join ---------- */
-  try { var saved = localStorage.getItem('paperio-name'); if (saved) nameEl.value = saved; } catch (e) { /* storage unavailable */ }
-
-  function play() {
-    var name = nameEl.value.trim() || 'Player';
-    try { localStorage.setItem('paperio-name', name); } catch (e) { /* storage unavailable */ }
-    socket.emit('setName', name);
-    joined = true;
-    wasAlive = true;
-    document.body.classList.add('playing');
-    startEl.classList.add('hidden');
-    nameEl.blur();
-    updateHud();
-  }
-  playBtn.addEventListener('click', play);
-  nameEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') play(); });
-
-  socket.on('connect', function () {
-    if (joined) socket.emit('setName', nameEl.value.trim() || 'Player');
-  });
-
-  /* ---------- Input ---------- */
-  var lastSent = '';
-  function sendMove(dx, dy) {
-    if (!joined) return;
-    var key = dx + ',' + dy;
-    if (key === lastSent && me && me.alive && me.dx === dx && me.dy === dy) return;
-    lastSent = key;
-    socket.emit('move', { dx: dx, dy: dy });
-  }
-
-  var KEYS = {
-    ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
-    w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0],
-    W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0]
-  };
-  window.addEventListener('keydown', function (e) {
-    if (!joined) return;
-    var d = KEYS[e.key];
-    if (!d) return;
-    e.preventDefault();
-    sendMove(d[0], d[1]);
-  });
-
-  var pad = document.getElementById('pad');
-  var btns = pad.querySelectorAll('button');
-  for (var b = 0; b < btns.length; b++) {
-    btns[b].addEventListener('pointerdown', function (e) {
-      e.preventDefault();
-      sendMove(parseInt(this.getAttribute('data-dx'), 10), parseInt(this.getAttribute('data-dy'), 10));
-    });
-  }
-
-  var touchX = 0, touchY = 0, touching = false;
-  canvas.addEventListener('touchstart', function (e) {
-    var t = e.changedTouches[0];
-    touchX = t.clientX; touchY = t.clientY; touching = true;
-    e.preventDefault();
-  }, { passive: false });
-  canvas.addEventListener('touchmove', function (e) {
-    if (!touching) return;
-    var t = e.changedTouches[0];
-    var ddx = t.clientX - touchX, ddy = t.clientY - touchY;
-    if (Math.abs(ddx) < 22 && Math.abs(ddy) < 22) { e.preventDefault(); return; }
-    if (Math.abs(ddx) > Math.abs(ddy)) sendMove(ddx > 0 ? 1 : -1, 0);
-    else sendMove(0, ddy > 0 ? 1 : -1);
-    touchX = t.clientX; touchY = t.clientY;
-    e.preventDefault();
-  }, { passive: false });
-  canvas.addEventListener('touchend', function () { touching = false; });
-  canvas.addEventListener('touchcancel', function () { touching = false; });
-
-  /* ---------- Rendering ---------- */
-  var W = 0, H = 0, dpr = 1;
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth; H = window.innerHeight;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-  }
-  window.addEventListener('resize', resize);
+const socket = io();
+let myRoom = '', paused = false, players = {};
+let keys = {};
+let myDir = {x:1,y:0};
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize); resize();
+function createRoom(){
+  const name = document.getElementById('nameInput').value || 'Player';
+  socket.emit('createRoom', {name});
+}
+function showJoin(){ document.getElementById('joinBox').style.display='flex'; }
+function joinRoom(){
+  const name = document.getElementById('nameInput').value || 'Player';
+  const code = document.getElementById('codeInput').value.trim();
+  socket.emit('joinRoom', {name, code});
+}
+function startGame(){ socket.emit('startGame'); }
+socket.on('roomCreated', d => {
+  myRoom = d.code;
+  document.getElementById('roomCode').textContent = d.code;
+  document.getElementById('roomInfo').style.display='flex';
+  document.getElementById('btnStart').style.display='block';
+  document.getElementById('btnCreate').style.display='none';
+  document.getElementById('btnJoin').style.display='none';
+  document.getElementById('joinBox').style.display='none';
+});
+socket.on('roomJoined', d => {
+  myRoom = d.code;
+  document.getElementById('roomCode').textContent = d.code;
+  document.getElementById('roomInfo').style.display='flex';
+  document.getElementById('btnCreate').style.display='none';
+  document.getElementById('btnJoin').style.display='none';
+  document.getElementById('joinBox').style.display='none';
+});
+socket.on('playerList', list => {
+  document.getElementById('playersList').textContent = list.length + ' / 10 שחקנים';
+});
+socket.on('errorMsg', m => document.getElementById('err').textContent = m);
+socket.on('gameStarted', d => {
+  players = d.players;
+  document.getElementById('lobby').style.display='none';
+  document.getElementById('game').style.display='block';
   resize();
-
-  var cam = { x: WORLD / 2, y: WORLD / 2, s: 0.5 };
-
-  function targetScale() {
-    if (!joined) return Math.min(W, H) / 1300;
-    return Math.max(0.55, Math.min(1.3, Math.min(W, H) / 680));
+});
+socket.on('gameUpdate', data => { if(!paused) players = data; draw(); });
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if(e.key === 'Escape'){ togglePause(!paused); }
+  updateDirFromKeys();
+});
+window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; updateDirFromKeys(); });
+function updateDirFromKeys(){
+  let x=0,y=0;
+  if(keys['w']||keys['arrowup']) y=-1;
+  if(keys['s']||keys['arrowdown']) y=1;
+  if(keys['a']||keys['arrowleft']) x=-1;
+  if(keys['d']||keys['arrowright']) x=1;
+  if(x!==0||y!==0){
+    const len = Math.sqrt(x*x+y*y);
+    myDir = {x:x/len, y:y/len};
+    socket.emit('move', {dirX: myDir.x, dirY: myDir.y});
   }
-
-  function roundRect(x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
+}
+canvas.addEventListener('mousemove', e => {
+  if(paused) return;
+  const rect = canvas.getBoundingClientRect();
+  socket.emit('move', {x: e.clientX - rect.left, y: e.clientY - rect.top});
+});
+canvas.addEventListener('touchstart', e => { e.preventDefault(); handleTouch(e); }, {passive:false});
+canvas.addEventListener('touchmove', e => { e.preventDefault(); handleTouch(e); }, {passive:false});
+function handleTouch(e){
+  const t = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  socket.emit('move', {x: t.clientX - rect.left, y: t.clientY - rect.top});
+}
+function togglePause(v){
+  paused = v;
+  document.getElementById('pauseMenu').style.display = v ? 'flex' : 'none';
+}
+function restartGame(){ paused=false; document.getElementById('pauseMenu').style.display='none'; startGame(); }
+function backToLobby(){ location.reload(); }
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#2a2a2a'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.strokeStyle='rgba(255,255,255,0.08)';
+  for(let x=0;x<canvas.width;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for(let y=0;y<canvas.height;y+=50){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+  for(const id in players){
+    const p = players[id];
+    if(!p.alive) continue;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x % canvas.width, p.y % canvas.height, 14, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='12px Arial'; ctx.textAlign='center';
+    ctx.fillText(p.name, p.x % canvas.width, (p.y % canvas.height)-20);
   }
-
-  function drawTerritory() {
-    var fills = {}, edges = {};
-    for (var gy = 0; gy < N; gy++) {
-      for (var gx = 0; gx < N; gx++) {
-        var o = grid[gy * N + gx];
-        if (o < 0) continue;
-        var p = byPid[o];
-        if (!p) continue;
-        var f = fills[o] || (fills[o] = { color: p.color, rects: [] });
-        f.rects.push(gx * GRID, gy * GRID);
-        var e = edges[o] || (edges[o] = { color: p.color, segs: [] });
-        var x0 = gx * GRID, y0 = gy * GRID, x1 = x0 + GRID, y1 = y0 + GRID;
-        if (gy > 0 && grid[(gy - 1) * N + gx] !== o) e.segs.push(x0, y0, x1, y0);
-        if (gy < N - 1 && grid[(gy + 1) * N + gx] !== o) e.segs.push(x0, y1, x1, y1);
-        if (gx > 0 && grid[gy * N + gx - 1] !== o) e.segs.push(x0, y0, x0, y1);
-        if (gx < N - 1 && grid[gy * N + gx + 1] !== o) e.segs.push(x1, y0, x1, y1);
-      }
-    }
-    var k, i;
-    for (k in fills) {
-      var fl = fills[k];
-      ctx.globalAlpha = 0.55;
-      ctx.fillStyle = fl.color;
-      ctx.beginPath();
-      for (i = 0; i < fl.rects.length; i += 2) ctx.rect(fl.rects[i], fl.rects[i + 1], GRID, GRID);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    for (k in edges) {
-      var ed = edges[k];
-      ctx.strokeStyle = ed.color;
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      for (i = 0; i < ed.segs.length; i += 4) {
-        ctx.moveTo(ed.segs[i], ed.segs[i + 1]);
-        ctx.lineTo(ed.segs[i + 2], ed.segs[i + 3]);
-      }
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawTrails() {
-    var size = 26, r = 7;
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i];
-      if (!p.alive || !p.trail.length) continue;
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = 0.75;
-      for (var t = 0; t < p.trail.length; t++) {
-        var c = p.trail[t];
-        roundRect(c[0] * GRID + (GRID - size) / 2, c[1] * GRID + (GRID - size) / 2, size, size, r);
-        ctx.fill();
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawPlayer(p) {
-    var d = disp[p.id];
-    if (!d) return;
-    // shadow
-    ctx.fillStyle = 'rgba(30, 45, 70, 0.22)';
-    ctx.beginPath(); ctx.ellipse(d.x, d.y + 17, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
-    // body
-    ctx.beginPath(); ctx.arc(d.x, d.y, 16, 0, Math.PI * 2);
-    ctx.fillStyle = p.color; ctx.fill();
-    ctx.lineWidth = 4; ctx.strokeStyle = '#ffffff'; ctx.stroke();
-    // highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.28)';
-    ctx.beginPath(); ctx.arc(d.x - 5, d.y - 5, 5, 0, Math.PI * 2); ctx.fill();
-    // eyes (look in travel direction)
-    var ex = p.dx * 3, ey = p.dy * 3;
-    var px = -p.dy * 5, py = p.dx * 5;
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(d.x + ex + px, d.y + ey + py, 3.4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(d.x + ex - px, d.y + ey - py, 3.4, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#26303d';
-    ctx.beginPath(); ctx.arc(d.x + ex * 1.6 + px, d.y + ey * 1.6 + py, 1.7, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(d.x + ex * 1.6 - px, d.y + ey * 1.6 - py, 1.7, 0, Math.PI * 2); ctx.fill();
-    // name
-    ctx.font = '800 15px Nunito, "Trebuchet MS", system-ui, sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.lineJoin = 'round'; ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.strokeText(p.name, d.x, d.y - 27);
-    ctx.fillStyle = '#26303d';
-    ctx.fillText(p.name, d.x, d.y - 27);
-  }
-
-  var last = performance.now();
-  function frame(now) {
-    var dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-
-    var kPos = 1 - Math.exp(-dt * 18);
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i], d = disp[p.id];
-      if (d) { d.x += (p.x - d.x) * kPos; d.y += (p.y - d.y) * kPos; }
-    }
-
-    var tx = WORLD / 2, ty = WORLD / 2;
-    if (joined && me && disp[me.id]) { tx = disp[me.id].x; ty = disp[me.id].y; }
-    else if (joined) { tx = cam.x; ty = cam.y; }
-    var kCam = 1 - Math.exp(-dt * 7);
-    cam.x += (tx - cam.x) * kCam;
-    cam.y += (ty - cam.y) * kCam;
-    cam.s += (targetScale() - cam.s) * (1 - Math.exp(-dt * 4));
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#d9e1e9';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.save();
-    ctx.translate(W / 2, H / 2);
-    ctx.scale(cam.s, cam.s);
-    ctx.translate(-cam.x, -cam.y);
-
-    // world floor
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, WORLD, WORLD);
-
-    // grid lines (visible range only)
-    var vx0 = Math.max(0, Math.floor((cam.x - W / 2 / cam.s) / GRID) * GRID);
-    var vx1 = Math.min(WORLD, Math.ceil((cam.x + W / 2 / cam.s) / GRID) * GRID);
-    var vy0 = Math.max(0, Math.floor((cam.y - H / 2 / cam.s) / GRID) * GRID);
-    var vy1 = Math.min(WORLD, Math.ceil((cam.y + H / 2 / cam.s) / GRID) * GRID);
-    ctx.strokeStyle = '#e7ecf1';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (var x = vx0; x <= vx1; x += GRID) { ctx.moveTo(x, vy0); ctx.lineTo(x, vy1); }
-    for (var y = vy0; y <= vy1; y += GRID) { ctx.moveTo(vx0, y); ctx.lineTo(vx1, y); }
-    ctx.stroke();
-
-    drawTerritory();
-    drawTrails();
-
-    for (var j = 0; j < players.length; j++) {
-      if (players[j].alive && (!me || players[j].id !== me.id)) drawPlayer(players[j]);
-    }
-    if (me && me.alive) drawPlayer(me);
-
-    // world border
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = '#b9c5d1';
-    ctx.strokeRect(-5, -5, WORLD + 10, WORLD + 10);
-
-    ctx.restore();
-    requestAnimationFrame(frame);
-  }
-  requestAnimationFrame(frame);
-})();
+}
 </script>
 </body>
 </html>
