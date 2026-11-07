@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Paper Arena</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0f172a;
+    font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif; color: #0f172a; }
+  .screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 16px; overflow-y: auto; }
+  .screen.active { display: flex; }
+  #home, #lobby { background: radial-gradient(circle at 20% 10%, #1e3a8a 0%, #0f172a 55%, #020617 100%); }
+  .card { width: 100%; max-width: 420px; background: #fff; border-radius: 24px; padding: 28px 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45); margin: auto; }
+  h1 { margin: 0 0 4px; font-size: 38px; letter-spacing: 1px; text-align: center; font-weight: 900;
+    background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { text-align: center; color: #64748b; margin: 0 0 20px; font-size: 14px; }
+  label { display: block; font-size: 12px; font-weight: 700; color: #64748b; letter-spacing: 1px; margin-bottom: 6px; }
+  input[type=text] { width: 100%; padding: 14px 16px; font-size: 18px; border: 2px solid #e2e8f0; border-radius: 14px;
+    outline: none; font-family: inherit; color: #0f172a; background: #f8fafc; }
+  input[type=text]:focus { border-color: #3b82f6; background: #fff; }
+  button { font-family: inherit; cursor: pointer; border: 0; }
+  .big { width: 100%; padding: 18px; font-size: 22px; font-weight: 900; letter-spacing: 1.5px; color: #fff; border-radius: 16px;
+    margin-top: 14px; box-shadow: 0 6px 0 rgba(0,0,0,.22); transition: transform .08s, box-shadow .08s; }
+  .big:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.22); }
+  .green { background: #22c55e; } .blue { background: #3b82f6; } .orange { background: #f97316; }
+  .joinbox { margin-top: 0; }
+  .joinbox input { display: none; margin-top: 14px; }
+  .joinbox.open { margin-top: 14px; padding: 14px; background: #fff7ed; border: 2px dashed #fdba74; border-radius: 18px; }
+  .joinbox.open input { display: block; margin-top: 0; }
+  .joinbox.open .big { margin-top: 10px; }
+  .joinbox input { text-align: center; letter-spacing: 6px; font-weight: 800; text-transform: uppercase; }
+  #status { margin-top: 16px; text-align: center; font-size: 13px; color: #64748b; min-height: 18px; }
+  #status .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; margin-right: 6px; vertical-align: middle; }
+  #status.ok .dot { background: #22c55e; }
+  #status.bad .dot { background: #ef4444; }
+
+  /* lobby */
+  .lab { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 2px; color: #64748b; }
+  .code { text-align: center; font-size: 56px; font-weight: 900; letter-spacing: 8px; color: #0f172a; margin: 4px 0 8px;
+    font-family: 'Courier New', monospace; user-select: all; }
+  #btnCopy { display: block; margin: 0 auto 16px; padding: 10px 22px; font-size: 14px; font-weight: 800; letter-spacing: 1px;
+    border-radius: 12px; background: #e0e7ff; color: #3730a3; }
+  #btnCopy.done { background: #dcfce7; color: #166534; }
+  .count { font-size: 13px; font-weight: 800; color: #475569; margin: 6px 0; }
+  #playerList { list-style: none; margin: 0 0 14px; padding: 0; max-height: 240px; overflow-y: auto; }
+  #playerList li { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #f1f5f9; border-radius: 12px; margin-bottom: 6px; font-weight: 700; }
+  #playerList li .tag { margin-left: auto; font-size: 11px; font-weight: 800; color: #64748b; }
+  .modes { display: flex; gap: 8px; }
+  .mode { flex: 1; padding: 12px 6px; font-size: 13px; font-weight: 900; letter-spacing: .5px; border-radius: 12px; background: #f1f5f9; color: #475569; border: 2px solid transparent; }
+  .mode.sel { background: #dbeafe; color: #1d4ed8; border-color: #3b82f6; }
+  .mode:disabled { cursor: default; opacity: .85; }
+  #modeHint { font-size: 12px; color: #64748b; text-align: center; margin: 8px 0 0; }
+  #waitMsg { text-align: center; color: #64748b; font-weight: 700; margin-top: 16px; font-size: 14px; }
+  .link { display: block; margin: 16px auto 0; background: none; color: #64748b; font-size: 14px; font-weight: 700; text-decoration: underline; }
+
+  /* game */
+  #game { padding: 0; background: #cfd5dc; display: none; }
+  #game.active { display: block; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  #hud { position: absolute; top: 10px; left: 10px; background: rgba(15,23,42,.78); color: #fff; padding: 8px 14px; border-radius: 12px;
+    font-weight: 800; font-size: 15px; line-height: 1.4; pointer-events: none; }
+  #hud span { color: #86efac; }
+  #board { position: absolute; top: 10px; right: 10px; width: 190px; background: rgba(255,255,255,.88); border-radius: 12px; padding: 8px 10px;
+    font-size: 13px; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  #board h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: 2px; color: #64748b; }
+  #board .row { display: flex; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 6px; }
+  #board .row.me { background: rgba(59,130,246,.18); font-weight: 900; }
+  #board .row .sw { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  #board .row .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #board .row .sc { font-variant-numeric: tabular-nums; color: #334155; }
+  #board .sep { text-align: center; color: #94a3b8; line-height: .6; }
+  #deathBox { position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%); background: rgba(15,23,42,.88); color: #fff;
+    padding: 14px 26px; border-radius: 16px; font-size: 22px; font-weight: 900; display: none; pointer-events: none; text-align: center; }
+  #btnExit { position: absolute; left: 10px; bottom: 10px; background: rgba(15,23,42,.78); color: #fff; font-weight: 800; font-size: 13px;
+    padding: 9px 14px; border-radius: 10px; }
+  #dpad { position: absolute; right: 14px; bottom: 14px; width: 168px; height: 168px; display: none; }
+  #dpad button { position: absolute; width: 56px; height: 56px; border-radius: 16px; background: rgba(15,23,42,.6); color: #fff; font-size: 24px; touch-action: none; }
+  #dpad .u { left: 56px; top: 0; } #dpad .d { left: 56px; top: 112px; } #dpad .l { left: 0; top: 56px; } #dpad .r { left: 112px; top: 56px; }
+  .touch #dpad { display: block; }
+  #toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 12px 22px; border-radius: 14px;
+    font-weight: 800; font-size: 16px; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 50; max-width: 90vw; text-align: center; }
+  #toast.show { opacity: 1; }
+  @media (max-width: 560px) { #board { width: 150px; font-size: 12px; } .code { font-size: 46px; letter-spacing: 6px; } }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <div class="card">
+    <h1>PAPER ARENA</h1>
+    <p class="sub">Claim territory. Cut trails. Be the biggest.</p>
+    <label for="nameInput">PLAYER NAME</label>
+    <input type="text" id="nameInput" maxlength="14" value="Player" autocomplete="off">
+    <button id="btnPlay" class="big green">PLAY NOW</button>
+    <button id="btnCreate" class="big blue">CREATE ROOM</button>
+    <div class="joinbox" id="joinbox">
+      <input type="text" id="codeInput" maxlength="6" placeholder="ROOM CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button id="btnJoin" class="big orange">JOIN ROOM</button>
+    </div>
+    <div id="status"><span class="dot"></span><span id="statusText">Connecting...</span></div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" class="screen">
+  <div class="card">
+    <div class="lab">ROOM CODE</div>
+    <div id="roomCode" class="code">------</div>
+    <button id="btnCopy">COPY</button>
+    <div class="count" id="lobbyCount">PLAYERS 0/10</div>
+    <ul id="playerList"></ul>
+    <div class="modes">
+      <button class="mode sel" id="modeFill">FILL WITH BOTS</button>
+      <button class="mode" id="modeOnly">PLAYERS ONLY</button>
+    </div>
+    <div id="modeHint"></div>
+    <button id="btnStart" class="big green">START</button>
+    <div id="waitMsg">ממתין שמנהל החדר יתחיל את המשחק...</div>
+    <button id="btnLeave" class="link">← Leave room</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div id="hud">AREA <span id="hudPct">0.00%</span><br>SCORE <span id="hudScore">0</span></div>
+  <div id="board"></div>
+  <div id="deathBox">💀 מתת! חוזר...</div>
+  <button id="btnExit">✕ EXIT</button>
+  <div id="dpad">
+    <button class="u" data-dx="0" data-dy="-1">▲</button>
+    <button class="l" data-dx="-1" data-dy="0">◀</button>
+    <button class="r" data-dx="1" data-dy="0">▶</button>
+    <button class="d" data-dx="0" data-dy="1">▼</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   >>> Replace with your Render URL after deploying (optional):
+   If you leave it as is, the game connects to the same server that
+   served this page - which is exactly what you want on Render.
+   ===================================================================== */
+const SERVER_URL = 'https://YOUR-RENDER-URL.onrender.com';
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  var WORLD = 2000, GRID = 40, N = 50;
+
+  function serverBase() {
+    if (!SERVER_URL || SERVER_URL.indexOf('YOUR-RENDER-URL') !== -1) {
+      if (location.protocol === 'file:') return 'http://localhost:3000';
+      return location.origin;
+    }
+    return SERVER_URL.replace(/\/+$/, '');
+  }
+  var BASE = serverBase();
+
+  // ---- DOM
+  var $ = function (id) { return document.getElementById(id); };
+  var screens = { home: $('home'), lobby: $('lobby'), game: $('game') };
+  var current = 'home';
+  function show(name) {
+    current = name;
+    for (var k in screens) screens[k].classList.toggle('active', k === name);
+    if (name === 'game') resize();
+  }
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600);
+  }
+  function setStatus(cls, text) {
+    var s = $('status');
+    s.className = cls;
+    $('statusText').textContent = text;
+  }
+
+  // ---- name persistence
+  try { var saved = localStorage.getItem('pa_name'); if (saved) $('nameInput').value = saved; } catch (e) {}
+  function getName() {
+    var n = $('nameInput').value.replace(/[<>]/g, '').trim().slice(0, 14) || 'Player';
+    try { localStorage.setItem('pa_name', n); } catch (e) {}
+    return n;
+  }
+
+  // ---- load socket.io client from the game server (CDN fallback)
+  function loadScript(src, ok, fail) {
+    var s = document.createElement('script');
+    s.src = src; s.onload = ok; s.onerror = fail;
+    document.head.appendChild(s);
+  }
+  setStatus('', 'Connecting to server... (first load on Render can take up to a minute)');
+  loadScript(BASE + '/socket.io/socket.io.js', start, function () {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js', start, function () {
+      setStatus('bad', 'Could not load the game client. Check the server URL.');
+    });
+  });
+
+  // ---- state
+  var socket = null;
+  var me = null;
+  var roster = {};          // id -> {name,color,bot}
+  var ents = {};            // id -> entity (positions, score, trail)
+  var grid = new Uint16Array(N * N);
+  var cam = { x: WORLD / 2, y: WORLD / 2, init: false };
+  var viewScale = 1;
+  var lobbyData = null;
+
+  var terr = document.createElement('canvas');   // 1 pixel per cell, scaled up crisply
+  terr.width = N; terr.height = N;
+  var terrCtx = terr.getContext('2d');
+
+  function hexToRgb(h) {
+    var v = parseInt(h.slice(1), 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+  function colorOf(id) { return roster[id] ? roster[id].color : '#94a3b8'; }
+  function rebuildTerritory() {
+    var img = terrCtx.createImageData(N, N);
+    var cache = {};
+    for (var i = 0; i < N * N; i++) {
+      var o = grid[i];
+      if (!o) continue;
+      var rgb = cache[o] || (cache[o] = hexToRgb(colorOf(o)));
+      img.data[i * 4] = rgb[0]; img.data[i * 4 + 1] = rgb[1]; img.data[i * 4 + 2] = rgb[2];
+      img.data[i * 4 + 3] = 140;     // alpha 0.55
+    }
+    terrCtx.putImageData(img, 0, 0);
+  }
+
+  function start() {
+    socket = io(BASE, { transports: ['websocket', 'polling'] });
+
+    socket.on('connect', function () { setStatus('ok', 'Connected'); });
+    socket.on('connect_error', function () { setStatus('', 'Connecting to server... (it may be waking up)'); });
+    socket.on('disconnect', function () {
+      setStatus('bad', 'Disconnected - reconnecting...');
+      if (current !== 'home') { show('home'); toast('החיבור לשרת נותק'); }
+      me = null;
+    });
+
+    socket.on('lobby', function (d) {
+      lobbyData = d;
+      if (current === 'game') return;
+      renderLobby(d);
+      show('lobby');
+    });
+
+    socket.on('init', function (d) {
+      me = d.you;
+      ents = {};
+      cam.init = false;
+      $('deathBox').style.display = 'none';
+      show('game');
+    });
+
+    socket.on('roster', function (list) {
+      roster = {};
+      for (var i = 0; i < list.length; i++) roster[list[i].id] = list[i];
+      rebuildTerritory();
+    });
+
+    socket.on('grid', function (buf) {
+      grid = new Uint16Array(buf.buffer ? buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) : buf);
+      rebuildTerritory();
+    });
+
+    socket.on('state', function (s) {
+      var seen = {};
+      for (var i = 0; i < s.p.length; i++) {
+        var e = s.p[i];
+        var en = ents[e.i];
+        if (!en) { en = ents[e.i] = { x: e.x, y: e.y, dx: e.x, dy: e.y, a: 0, s: 0, r: [] }; }
+        if (e.a && (!en.a || Math.abs(e.x - en.dx) + Math.abs(e.y - en.dy) > 200)) { en.dx = e.x; en.dy = e.y; }
+        en.x = e.x; en.y = e.y; en.a = e.a; en.s = e.s; en.r = e.r;
+        seen[e.i] = 1;
+      }
+      for (var k in ents) if (!seen[k]) delete ents[k];
+      onState();
+    });
+  }
+
+  // ---- HOME actions
+  function guardSocket() {
+    if (!socket) { toast('עדיין מתחבר לשרת...'); return false; }
+    return true;
+  }
+  $('btnPlay').onclick = function () {
+    if (!guardSocket()) return;
+    socket.emit('playNow', { name: getName() }, function (r) {
+      if (!r || !r.ok) toast((r && r.error) || 'שגיאה');
+    });
+  };
+  $('btnCreate').onclick = function () {
+    if (!guardSocket()) return;
+    socket.emit('createRoom', { name: getName() }, function (r) {
+      if (!r || !r.ok) toast((r && r.error) || 'שגיאה');
+    });
+  };
+  function doJoin() {
+    if (!guardSocket()) return;
+    var code = $('codeInput').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length !== 6) { toast('הכנס קוד חדר בן 6 תווים'); return; }
+    socket.emit('joinRoom', { name: getName(), code: code }, function (r) {
+      if (!r || !r.ok) toast((r && r.error) || 'שגיאה');
+    });
+  }
+  $('btnJoin').onclick = function () {
+    var box = $('joinbox');
+    if (!box.classList.contains('open')) {
+      box.classList.add('open');
+      $('codeInput').focus();
+      return;
+    }
+    doJoin();
+  };
+  $('codeInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') doJoin(); });
+  $('codeInput').addEventListener('input', function () {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  });
+  $('nameInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('btnPlay').click(); });
+
+  // ---- LOBBY
+  function renderLobby(d) {
+    $('roomCode').textContent = d.code;
+    $('lobbyCount').textContent = 'PLAYERS ' + d.players.length + '/' + d.max;
+    var ul = $('playerList');
+    ul.innerHTML = '';
+    d.players.forEach(function (p) {
+      var li = document.createElement('li');
+      var nm = document.createElement('span');
+      nm.textContent = p.name;
+      li.appendChild(nm);
+      var tag = document.createElement('span');
+      tag.className = 'tag';
+      var t = [];
+      if (p.id === d.hostId) t.push('👑 HOST');
+      if (p.id === d.you) t.push('YOU');
+      tag.textContent = t.join(' · ');
+      li.appendChild(tag);
+      ul.appendChild(li);
+    });
+    var isHost = d.hostId === d.you;
+    $('modeFill').classList.toggle('sel', d.mode === 'fill');
+    $('modeOnly').classList.toggle('sel', d.mode === 'only');
+    $('modeFill').disabled = !isHost;
+    $('modeOnly').disabled = !isHost;
+    var hint;
+    if (d.mode === 'fill') {
+      var bots = Math.max(0, d.max - d.players.length);
+      hint = 'Bots will fill the room up to ' + d.max + ' players (+' + bots + ' bots now).';
+    } else {
+      hint = 'Only the players in this room - no bots.';
+    }
+    $('modeHint').textContent = hint;
+    $('btnStart').style.display = isHost ? 'block' : 'none';
+    $('waitMsg').style.display = isHost ? 'none' : 'block';
+  }
+  $('modeFill').onclick = function () { socket.emit('setMode', 'fill'); };
+  $('modeOnly').onclick = function () { socket.emit('setMode', 'only'); };
+  $('btnStart').onclick = function () { socket.emit('start'); };
+  $('btnLeave').onclick = leave;
+  $('btnExit').onclick = leave;
+  function leave() {
+    if (socket) socket.emit('leave');
+    me = null; lobbyData = null;
+    show('home');
+  }
+  $('btnCopy').onclick = function () {
+    var code = $('roomCode').textContent;
+    var btn = this;
+    function ok() {
+      btn.textContent = 'COPIED ✓'; btn.classList.add('done');
+      setTimeout(function () { btn.textContent = 'COPY'; btn.classList.remove('done'); }, 1500);
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); ok();
+      } catch (e) { toast('העתק ידנית: ' + code); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(ok, fallback);
+    } else fallback();
+  };
+
+  // ---- INPUT
+  function sendDir(dx, dy) {
+    if (socket && current === 'game') socket.emit('dir', { dx: dx, dy: dy });
+  }
+  var keyMap = {
+    ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    w: [0, -1], s: [0, 1], a: [-1, 0], d: [1, 0], W: [0, -1], S: [0, 1], A: [-1, 0], D: [1, 0]
+  };
+  window.addEventListener('keydown', function (e) {
+    if (current !== 'game') return;
+    var m = keyMap[e.key];
+    if (!m) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    sendDir(m[0], m[1]);
+  });
+
+  var isTouch = ('ontouchstart' in window) || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  if (isTouch) document.body.classList.add('touch');
+  Array.prototype.forEach.call(document.querySelectorAll('#dpad button'), function (b) {
+    var fire = function (e) { e.preventDefault(); sendDir(+b.dataset.dx, +b.dataset.dy); };
+    b.addEventListener('touchstart', fire, { passive: false });
+    b.addEventListener('mousedown', fire);
+  });
+
+  var cv = $('cv'), ctx = cv.getContext('2d');
+  var sw = null;
+  cv.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    var t = e.touches[0]; sw = { x: t.clientX, y: t.clientY };
+  }, { passive: false });
+  cv.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (!sw) return;
+    var t = e.touches[0];
+    var dx = t.clientX - sw.x, dy = t.clientY - sw.y;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    if (Math.abs(dx) > Math.abs(dy)) sendDir(dx > 0 ? 1 : -1, 0); else sendDir(0, dy > 0 ? 1 : -1);
+    sw = { x: t.clientX, y: t.clientY };
+  }, { passive: false });
+  cv.addEventListener('touchend', function (e) { e.preventDefault(); sw = null; }, { passive: false });
+
+  // ---- HUD / leaderboard
+  var lastBoard = 0;
+  function onState() {
+    var m = ents[me];
+    if (m) {
+      $('hudPct').textContent = (m.s / (N * N) * 100).toFixed(2) + '%';
+      $('hudScore').textContent = m.s;
+      $('deathBox').style.display = m.a ? 'none' : 'block';
+    }
+    var now = performance.now();
+    if (now - lastBoard < 150) return;
+    lastBoard = now;
+    var arr = [];
+    for (var id in ents) {
+      if (ents[id].a && roster[id]) arr.push({ id: +id, s: ents[id].s });
+    }
+    arr.sort(function (a, b) { return b.s - a.s; });
+    var board = $('board');
+    board.innerHTML = '';
+    var h = document.createElement('h4'); h.textContent = 'TOP 5'; board.appendChild(h);
+    function row(rank, it) {
+      var r = document.createElement('div');
+      r.className = 'row' + (it.id === me ? ' me' : '');
+      var sp = document.createElement('span'); sp.textContent = rank + '.'; sp.style.width = '16px'; r.appendChild(sp);
+      var sw2 = document.createElement('span'); sw2.className = 'sw'; sw2.style.background = colorOf(it.id); r.appendChild(sw2);
+      var nm = document.createElement('span'); nm.className = 'nm';
+      nm.textContent = roster[it.id].name + (it.id === me ? ' (me)' : ''); r.appendChild(nm);
+      var sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = it.s; r.appendChild(sc);
+      board.appendChild(r);
+    }
+    for (var i = 0; i < Math.min(5, arr.length); i++) row(i + 1, arr[i]);
+    var myIdx = arr.findIndex(function (a) { return a.id === me; });
+    if (myIdx >= 5) {
+      var sep = document.createElement('div'); sep.className = 'sep'; sep.textContent = '⋮'; board.appendChild(sep);
+      row(myIdx + 1, arr[myIdx]);
+    }
+  }
+
+  // ---- rendering
+  function resize() {
+    var dpr = window.devicePixelRatio || 1;
+    cv.width = Math.floor(window.innerWidth * dpr);
+    cv.height = Math.floor(window.innerHeight * dpr);
+    viewScale = Math.max(0.55, Math.min(1, Math.min(window.innerWidth, window.innerHeight) / 640));
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function draw() {
+    var dpr = window.devicePixelRatio || 1;
+    var W = cv.width, H = cv.height;
+
+    // smooth entity positions
+    for (var id in ents) {
+      var en = ents[id];
+      en.dx += (en.x - en.dx) * 0.5;
+      en.dy += (en.y - en.dy) * 0.5;
+    }
+    var m = ents[me];
+    if (m) {
+      if (!cam.init) { cam.x = m.dx; cam.y = m.dy; cam.init = true; }
+      else { cam.x += (m.dx - cam.x) * 0.15; cam.y += (m.dy - cam.y) * 0.15; }
+    }
+
+    var s = viewScale * dpr;
+    var ox = Math.round(W / 2 - cam.x * s);
+    var oy = Math.round(H / 2 - cam.y * s);
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#cfd5dc';
+    ctx.fillRect(0, 0, W, H);
+    ctx.setTransform(s, 0, 0, s, ox, oy);
+
+    var left = -ox / s, top = -oy / s, right = (W - ox) / s, bottom = (H - oy) / s;
+
+    // world
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, WORLD, WORLD);
+
+    // grid lines
+    ctx.strokeStyle = '#eee';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    var gx0 = Math.max(0, Math.floor(left / GRID)), gx1 = Math.min(N, Math.ceil(right / GRID));
+    var gy0 = Math.max(0, Math.floor(top / GRID)), gy1 = Math.min(N, Math.ceil(bottom / GRID));
+    for (var gx = gx0; gx <= gx1; gx++) { ctx.moveTo(gx * GRID, gy0 * GRID); ctx.lineTo(gx * GRID, gy1 * GRID); }
+    for (var gy = gy0; gy <= gy1; gy++) { ctx.moveTo(gx0 * GRID, gy * GRID); ctx.lineTo(gx1 * GRID, gy * GRID); }
+    ctx.stroke();
+
+    // territory (alpha 0.55 baked into the tiny canvas, drawn crisp)
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(terr, 0, 0, WORLD, WORLD);
+
+    // trails
+    ctx.globalAlpha = 0.9;
+    for (var id2 in ents) {
+      var e2 = ents[id2];
+      if (!e2.a || !e2.r || !e2.r.length) continue;
+      ctx.fillStyle = colorOf(id2);
+      for (var i = 0; i < e2.r.length; i++) {
+        var c = e2.r[i];
+        ctx.fillRect((c % N) * GRID + 8, ((c / N) | 0) * GRID + 8, GRID - 16, GRID - 16);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // world border
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(-3, -3, WORLD + 6, WORLD + 6);
+
+    // players (me on top)
+    var order = Object.keys(ents).sort(function (a, b) { return (a == me) - (b == me); });
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px Arial, sans-serif';
+    for (var k = 0; k < order.length; k++) {
+      var pid = order[k], p = ents[pid];
+      if (!p.a || !roster[pid]) continue;
+      if (p.dx < left - 40 || p.dx > right + 40 || p.dy < top - 40 || p.dy > bottom + 40) continue;
+      ctx.beginPath();
+      ctx.arc(p.dx, p.dy, 14, 0, Math.PI * 2);
+      ctx.fillStyle = colorOf(pid);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(255,255,255,.85)';
+      ctx.strokeText(roster[pid].name, p.dx, p.dy - 22);
+      ctx.fillStyle = '#000';
+      ctx.fillText(roster[pid].name, p.dx, p.dy - 22);
+    }
+  }
+
+  function frame() {
+    if (current === 'game') draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
